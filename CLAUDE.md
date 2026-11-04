@@ -11,6 +11,8 @@ npm run dev        # http://localhost:3000, tambah ?fast=1 buat countdown cepat
 npm test           # vitest run (unit)
 npm run test:e2e   # playwright (kamera palsu Chromium)
 npx tsc --noEmit   # typecheck
+npm run log added "isi catatan"   # tambah catatan ke [Unreleased] di CHANGELOG.md
+npm run bump minor                # naikkan versi: major, minor, atau patch
 ```
 
 Sebelum bilang tugas selesai: `npx tsc --noEmit` dan `npm test` harus bersih. Kalau menyentuh alur pengunjung, jalankan juga e2e.

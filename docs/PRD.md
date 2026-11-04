@@ -114,19 +114,19 @@ Satu aturan pegangan: **semua tampilan print berasal dari satu JSON template lew
 
 ```ts
 interface Template {
-  id: string; name: string; category: "romantis" | "umum";
+  id: string; name: string; category: "romantis" | "umum" | "acara";
   size: { width: number; height: number }; // px, mis. 600x1800
   slots: Rect[];                            // ternormalisasi 0..1
   textArea: Rect;
   background: { color: string; image?: string; tint?: number };
-  pattern: "none" | "dots" | "hearts" | "stripes";
-  photo: { radius: number; filter: string };
+  pattern: "none" | "dots" | "hearts" | "stars" | "stripes";
+  photo: { radius: number; shape: "rounded" | "circle" | "heart" | "star" | "flower" | "arch" | "cloud"; outline: string; filter: string };
   text: { font: string; color: string; title: string; subtitle: string };
   layers: Layer[];                          // karakter, stiker, potongan foto
   overlay?: string;                         // PNG frame di paling atas
   brand?: { name: string; logo?: string };
 }
-interface Layer { id: string; src: string; x: number; y: number; scale: number; rot: number; flip: boolean }
+interface Layer { id: string; src: string; x: number; y: number; scale: number; rot: number; flip: boolean; aspect: number }
 ```
 
 Urutan gambar di `renderPrint`: background → foto latar + tint → motif → foto di slot → teks → layer → watermark → overlay PNG.
