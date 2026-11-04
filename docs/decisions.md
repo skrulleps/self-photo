@@ -14,7 +14,7 @@ Format: tanggal · keputusan · alasan · alternatif yang ditolak. Terbaru di at
 - **Keputusan:** fase ini non-komersial dan di-deploy sebagai file statis (`output: "export"`) ke Cloudflare Pages. Merge ke `main` jadi production, tiap PR dapat URL preview. Fitur server (M7 dan M8) dan versi komersial akan memakai hosting dan arsitektur yang ditinjau ulang.
 - **Alasan:** kuota request akun Vercel pemilik sudah banyak terpakai untuk proyek lain, dan melewati batasnya bisa menghentikan semua proyek di akun itu. Halaman batasan Cloudflare Pages nggak menyebut batas request file statis, dan alamat `pages.dev` nggak butuh `basePath`.
 - **Ditolak:** Vercel Hobby (berbagi kuota dengan proyek lain); Netlify Free (300 kredit per bulan, tiap deploy production 15 kredit); GitHub Pages (perlu `basePath`, nggak ada preview bawaan).
-- **Catatan:** E2E di CI menyajikan `out/` dengan `python3 -m http.server`, karena `next start` nggak jalan dengan `output: "export"`.
+- **Catatan:** E2E di CI menyajikan `out/` dengan `python3 -m http.server`, karena `next start` nggak jalan dengan `output: "export"`. `cacheComponents` dan `partialPrefetching` dihapus karena memakai PPR, yang ditolak Next di mode ekspor statis. Proyek ini nggak memakai `"use cache"`.
 
 ## 2026-11-04 · Script rilis sendiri, terinspirasi Cider
 
