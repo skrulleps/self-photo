@@ -10,6 +10,6 @@
 ## Checklist
 
 - [ ] Added or updated tests
-- [ ] Updated `CHANGELOG.md` for user-facing changes
-- [ ] Bumped the version if this PR is a release
+- [ ] Added release notes with `npm run log` for user-facing changes
+- [ ] Added a `minor` or `major` label if this isn't a patch release
 - [ ] Recorded big decisions in `docs/decisions.md`

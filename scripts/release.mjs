@@ -41,12 +41,25 @@ export function addEntry(changelog, type, text) {
   return `${changelog.slice(0, start)}${body}\n\n${changelog.slice(end)}`;
 }
 
+export function hasPending(changelog) {
+  const [start, end] = unreleased(changelog);
+  return /^- /m.test(changelog.slice(start, end));
+}
+
 export function releaseChangelog(changelog, version, date) {
   if (changelog.includes(`## [${version}]`)) throw new Error(`Versi ${version} sudah ada di changelog.`);
+  if (!hasPending(changelog)) throw new Error("Bagian [Unreleased] masih kosong. Tambah catatan dulu.");
   const [start, end] = unreleased(changelog);
   const notes = changelog.slice(start + HEAD.length, end).trim();
-  if (!notes.includes("- ")) throw new Error("Bagian [Unreleased] masih kosong. Tambah catatan dulu.");
   return `${changelog.slice(0, start)}${HEAD}\n\n## [${version}] - ${date}\n\n${notes}\n\n${changelog.slice(end)}`;
+}
+
+export function releaseNotes(changelog, version) {
+  const start = changelog.indexOf(`## [${version}]`);
+  if (start < 0) throw new Error(`Versi ${version} belum ada di changelog.`);
+  const bodyStart = changelog.indexOf("\n", start);
+  const next = changelog.indexOf("\n## [", bodyStart);
+  return changelog.slice(bodyStart, next < 0 ? changelog.length : next).trim();
 }
 
 function main([command, ...args]) {
@@ -72,6 +85,8 @@ function main([command, ...args]) {
     writeFileSync("CHANGELOG.md", changelog);
     return `Versi naik ke ${version}.`;
   }
+  if (command === "pending") return String(hasPending(read("CHANGELOG.md")));
+  if (command === "notes") return releaseNotes(read("CHANGELOG.md"), args[0]);
   throw new Error('Pakai: npm run log <jenis> "isi catatan", atau npm run bump <major|minor|patch>.');
 }
 

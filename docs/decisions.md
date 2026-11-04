@@ -2,6 +2,13 @@
 
 Format: tanggal · keputusan · alasan · alternatif yang ditolak. Terbaru di atas.
 
+## 2026-11-04 · Rilis otomatis setelah PR di-merge
+
+- **Keputusan:** workflow `release.yml` menaikkan versi dari versi terakhir, memperbarui changelog, lalu membuat tag dan GitHub Release setelah merge. Bawaannya patch, label PR `minor` atau `major` mengubahnya. Kalau `[Unreleased]` kosong, nggak ada rilis. Push ke `main` memakai deploy key yang diberi bypass di ruleset.
+- **Alasan:** `GITHUB_TOKEN` nggak bisa melewati aturan `main`. Deploy key cukup untuk satu repo, nggak perlu token akun.
+- **Ditolak:** bump di dalam PR sebelum merge (push dari `GITHUB_TOKEN` nggak memicu CI, jadi check wajib nggak pernah jalan di commit barunya); PR rilis otomatis seperti release-please (rilis jadi butuh merge kedua).
+- **Risiko:** deploy key bisa melewati aturan `main`, jadi private key-nya cuma boleh ada di secret GitHub.
+
 ## 2026-11-04 · Hosting statis di Cloudflare Pages, fase non-komersial
 
 - **Keputusan:** fase ini non-komersial dan di-deploy sebagai file statis (`output: "export"`) ke Cloudflare Pages. Merge ke `main` jadi production, tiap PR dapat URL preview. Fitur server (M7 dan M8) dan versi komersial akan memakai hosting dan arsitektur yang ditinjau ulang.

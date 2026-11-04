@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addEntry, bumpVersion, releaseChangelog } from "../../scripts/release.mjs";
+import { addEntry, bumpVersion, hasPending, releaseChangelog, releaseNotes } from "../../scripts/release.mjs";
 
 const OLD = "## [0.2.0] - 2026-11-03\n\n### Added\n\n- Lama\n";
 const log = (unreleased = "") => `# Changelog\n\n## [Unreleased]\n\n${unreleased}${unreleased && "\n\n"}${OLD}`;
@@ -53,6 +53,31 @@ describe("addEntry", () => {
   });
   it("changelog tanpa Unreleased ditolak", () => {
     expect(() => addEntry(OLD, "added", "x")).toThrow("Unreleased");
+  });
+});
+
+describe("hasPending", () => {
+  it("true kalau Unreleased punya catatan", () => {
+    expect(hasPending(log("### Added\n\n- Baru"))).toBe(true);
+  });
+  it("catatan di versi lama nggak dihitung", () => {
+    expect(hasPending(log())).toBe(false);
+  });
+  it("judul bagian tanpa catatan nggak dihitung", () => {
+    expect(hasPending(log("### Added"))).toBe(false);
+  });
+});
+
+describe("releaseNotes", () => {
+  const two = `## [Unreleased]\n\n## [0.3.0] - 2026-11-04\n\n### Fixed\n\n- Baru\n\n${OLD}`;
+  it("cuma mengambil isi versi itu, tanpa judul versi", () => {
+    expect(releaseNotes(two, "0.3.0")).toBe("### Fixed\n\n- Baru");
+  });
+  it("versi paling lama juga bisa diambil", () => {
+    expect(releaseNotes(two, "0.2.0")).toBe("### Added\n\n- Lama");
+  });
+  it("versi yang belum ada ditolak", () => {
+    expect(() => releaseNotes(two, "9.9.9")).toThrow("belum ada");
   });
 });
 

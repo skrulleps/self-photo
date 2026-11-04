@@ -67,12 +67,20 @@ If E2E fails, download the `playwright-report` artifact from the workflow run to
 
 The release commands are inspired by [Cider](https://github.com/f3ath/cider), a similar tool for Dart.
 
+Add release notes to your pull request:
+
 ```bash
 npm run log added "Share button for WhatsApp"   # types: added, changed, fixed, removed, deprecated, security
-npm run bump minor                              # also: major, patch
 ```
 
-These commands only edit files. Open a pull request with the changes, then tag the release on `main` after it's merged.
+When the pull request is merged, the Release workflow bumps the version, updates the changelog, and creates a tag and GitHub Release:
+
+- The bump is `patch` by default. Add a `minor` or `major` label to the pull request for a bigger one.
+- If `[Unreleased]` has no notes, no release is created.
+
+Setup: the workflow pushes to `main` with a deploy key, because the ruleset blocks other direct pushes. Add the private key as the `RELEASE_DEPLOY_KEY` Actions secret, and the public key as a deploy key with write access.
+
+`npm run bump <major|minor|patch>` does the same version and changelog update locally, without committing or tagging.
 
 ## Deployment
 

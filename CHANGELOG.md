@@ -4,15 +4,6 @@ All notable changes to Studio Jepret are listed here. The format follows [Keep a
 
 ## [Unreleased]
 
-### Changed
-
-- The app now builds as a static site for Cloudflare Pages, so `npm start` is gone. Use `npx serve@latest out` to preview a build.
-
-### Added
-
-- GitHub Actions checks on every pull request, a ruleset that protects `main`, and a pull request template.
-- `npm run log` and `npm run bump` commands for changelog entries and version bumps, inspired by [Cider](https://github.com/f3ath/cider).
-
 ## [0.2.0] - 2026-11-03
 
 The full visitor flow, a frame editor, themed frames, and a new look.
@@ -31,6 +22,8 @@ The full visitor flow, a frame editor, themed frames, and a new look.
 - **Save and share:** PNG download, device share sheet, and email. On desktop, the email button downloads the photo and opens your email app, and you attach the file yourself.
 - **Sound effects:** countdown beeps, a shutter sound, and a jingle when the print is ready, with a mute button.
 - **Tests:** Playwright end-to-end tests with a fake camera, and more unit tests.
+- **CI:** GitHub Actions checks on every pull request, a ruleset that protects `main`, and a pull request template.
+- **Releases:** `npm run log` and `npm run bump` commands, inspired by [Cider](https://github.com/f3ath/cider), and an automatic version bump, tag, and GitHub Release after each merge.
 
 ### Changed
 
@@ -39,6 +32,7 @@ The full visitor flow, a frame editor, themed frames, and a new look.
 - **Result screen:** the print is centered and highlighted, with the action buttons below it.
 - **Print text:** now uses the Fredoka font instead of the system font.
 - **`renderPrint`:** now takes `renderPrint(ctx, input)`, so preview, thumbnails, editor, and export share one input shape.
+- **Hosting:** the app now builds as a static site for Cloudflare Pages, so `npm start` is gone. Use `npx serve@latest out` to preview a build.
 
 ### Fixed
 

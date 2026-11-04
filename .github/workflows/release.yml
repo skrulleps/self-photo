@@ -1,0 +1,52 @@
+name: Release
+
+# Setelah PR di-merge: naikkan versi dari versi terakhir, lalu buat tag dan GitHub Release.
+# Kalau [Unreleased] di CHANGELOG.md kosong, nggak ada rilis (misalnya PR yang cuma merapikan kode).
+# Bawaannya patch. Tambahkan label "minor" atau "major" di PR untuk kenaikan yang lebih besar.
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+# rilis dijalankan satu per satu, biar dua merge berdekatan nggak rebutan push
+concurrency:
+  group: release
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Bump version and release
+    # PR dari fork nggak boleh memicu rilis
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          # deploy key punya izin bypass di ruleset main, GITHUB_TOKEN nggak punya
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Check for release notes
+        id: pending
+        run: echo "value=$(node scripts/release.mjs pending)" >> "$GITHUB_OUTPUT"
+      - name: Bump version, tag, and publish
+        if: steps.pending.outputs.value == 'true'
+        env:
+          LEVEL: ${{ contains(github.event.pull_request.labels.*.name, 'major') && 'major' || contains(github.event.pull_request.labels.*.name, 'minor') && 'minor' || 'patch' }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          npm run bump "$LEVEL"
+          VERSION=$(node -p "require('./package.json').version")
+          node scripts/release.mjs notes "$VERSION" > "$RUNNER_TEMP/notes.md"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json CHANGELOG.md
+          git commit -m "chore(release): v$VERSION"
+          git tag "v$VERSION"
+          git push --atomic origin main "v$VERSION"
+          gh release create "v$VERSION" --title "v$VERSION" --notes-file "$RUNNER_TEMP/notes.md"
