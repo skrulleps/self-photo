@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Hasil Playwright, isinya kode yang dibuat otomatis.
+    "playwright-report/**",
+    "test-results/**",
   ]),
 ]);
 
