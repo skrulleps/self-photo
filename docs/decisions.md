@@ -62,10 +62,10 @@ Format: tanggal · keputusan · alasan · alternatif yang ditolak. Terbaru di at
 
 ## 2026-11-03 · Binding `rolldown` dicantumkan eksplisit
 
-- **Keputusan:** `@rolldown/binding-win32-x64-msvc` dan `@rolldown/binding-linux-x64-gnu` masuk `optionalDependencies`, versinya dikunci sama dengan `rolldown`.
+- **Keputusan:** kelima belas `@rolldown/binding-*` dan `fsevents` masuk `optionalDependencies`, versinya dikunci sama dengan yang dibutuhkan `rolldown` dan `vite`. Awalnya cuma Windows dan Linux x64, tapi `npm ci` di CI menolak lockfile yang nggak punya binding lainnya.
 - **Alasan:** selama `@playwright/test` ada di `package.json`, instal bersih menghilangkan binding ini dari lockfile dan Vitest gagal start. Mekanisme pastinya di dalam npm belum diketahui.
 - **Ditolak:** membuat ulang lockfile (sudah dicoba, binding tetap hilang); `npm install --no-save` (hilang lagi setelah instal ulang).
-- **Catatan:** kalau `rolldown` naik versi, kedua binding ini harus ikut dinaikkan.
+- **Catatan:** kalau `rolldown` naik versi, semua binding ini harus ikut dinaikkan, lalu cek dengan `npm ci --dry-run`.
 
 ## 2026-11-03 · Struktur folder tanpa `src/`
 

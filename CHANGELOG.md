@@ -38,7 +38,7 @@ The full visitor flow, a frame editor, themed frames, and a new look.
 
 - **Empty slots:** they now stay empty until filled, instead of repeating the last photo.
 - **Older browsers:** photos with rounded corners now work without `roundRect` support.
-- **Test setup:** the `rolldown` binaries for Windows x64 and Linux x64 are now listed as optional dependencies, because npm could drop them during install.
+- **Install:** all `rolldown` binaries and `fsevents` are now listed as optional dependencies, because npm could drop them from the lockfile and break `npm ci`.
 
 ### Known limitations
 

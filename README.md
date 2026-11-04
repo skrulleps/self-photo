@@ -145,7 +145,7 @@ Planned work from the [PRD](docs/PRD.md):
 
 ## Troubleshooting
 
-**`Cannot find native binding` when running tests.** npm can drop the platform-specific `rolldown` binary during install. Windows x64 and Linux x64 bindings are listed in `optionalDependencies` for this reason. On another platform, add the matching `@rolldown/binding-*` package at the same version as `rolldown`. When `rolldown` is upgraded, upgrade these packages too.
+**`Cannot find native binding` in tests, or `Missing: ... from lock file` from `npm ci`.** npm can drop platform-specific optional packages from the lockfile. To prevent this, all `@rolldown/binding-*` packages and `fsevents` are listed in `optionalDependencies`. When `rolldown` is upgraded, upgrade these packages to the same version, then confirm with `npm ci --dry-run`.
 
 ## License
 
