@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // file statis di folder out/, disajikan Cloudflare Pages tanpa server Node
+  output: "export",
   experimental: {
     agentFeedback: true,
   },
