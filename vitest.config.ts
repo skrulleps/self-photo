@@ -3,7 +3,7 @@ import path from 'node:path';
 
 export default defineConfig({
     test: {
-        exclude: ["**/node_modules/**", "**/dist/**", ...configDefaults.exclude],
+        exclude: ["**/node_modules/**", "**/dist/**", "tests/e2e/**", ...configDefaults.exclude],
         include: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
     },
     resolve: {
