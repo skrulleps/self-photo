@@ -1,27 +1,39 @@
-export type Phase = "idle" | "countdown" | "capturing" | "review";
+export type Phase = "idle" | "ready" | "countdown" | "capturing" | "review";
 
 export interface BoothState { phase: Phase; shot: number; total: number; count: number }
 
 export type BoothEvent =
   | { type: "START"; total: number }
+  | { type: "SHOOT" }
   | { type: "TICK" }
   | { type: "CAPTURED" }
+  | { type: "PICKED" }
+  | { type: "CANCEL" }
   | { type: "RETAKE" };
 
 export const initialBooth: BoothState = { phase: "idle", shot: 0, total: 0, count: 0 };
 
+// slot keisi: lanjut nunggu slot berikutnya, atau selesai kalau udah penuh
+function advance(s: BoothState): BoothState {
+  const next = s.shot + 1;
+  return { ...s, phase: next >= s.total ? "review" : "ready", shot: next };
+}
+
 export function boothReducer(s: BoothState, e: BoothEvent): BoothState {
   switch (e.type) {
     case "START":
-      return s.phase === "idle" && e.total > 0 ? { phase: "countdown", shot: 0, total: e.total, count: 3 } : s;
+      return s.phase === "idle" && e.total > 0 ? { phase: "ready", shot: 0, total: e.total, count: 0 } : s;
+    case "SHOOT":
+      return s.phase === "ready" ? { ...s, phase: "countdown", count: 3 } : s;
     case "TICK":
       if (s.phase !== "countdown") return s;
       return s.count > 1 ? { ...s, count: s.count - 1 } : { ...s, phase: "capturing", count: 0 };
-    case "CAPTURED": {
-      if (s.phase !== "capturing") return s;
-      const next = s.shot + 1;
-      return next >= s.total ? { ...s, phase: "review", shot: next } : { ...s, phase: "countdown", shot: next, count: 3 };
-    }
+    case "CAPTURED":
+      return s.phase === "capturing" ? advance(s) : s;
+    case "PICKED":
+      return s.phase === "ready" ? advance(s) : s;
+    case "CANCEL":
+      return s.phase === "ready" ? initialBooth : s;
     case "RETAKE":
       return s.phase === "review" ? initialBooth : s;
   }
