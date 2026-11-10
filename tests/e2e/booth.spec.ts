@@ -333,14 +333,17 @@ test("karakter bisa digeser langsung di canvas", async ({ page }) => {
   const slider = page.getByLabel("Geser kiri-kanan");
   await expect(slider).toHaveValue("0.5");
 
-  const box = (await page.getByRole("img", { name: "Editor frame" }).boundingBox())!;
+  // hover menggulir canvas ke layar dan gagal dengan jelas kalau ada elemen lain yang menutupi titik tengahnya
+  const canvas = page.getByRole("img", { name: "Editor frame" });
+  await canvas.hover();
+  const box = (await canvas.boundingBox())!;
   const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
-  await page.mouse.move(cx, cy);
   await page.mouse.down();
   await page.mouse.move(cx + box.width / 4, cy, { steps: 4 });
   await page.mouse.up();
 
-  await expect.poll(async () => Number(await slider.inputValue())).toBeGreaterThan(0.5);
+  // digeser seperempat lebar canvas: dari 0.5 harusnya sekitar 0.75
+  await expect.poll(async () => Number(await slider.inputValue())).toBeGreaterThan(0.6);
 });
 
 test("frame custom bisa dihapus", async ({ page }) => {

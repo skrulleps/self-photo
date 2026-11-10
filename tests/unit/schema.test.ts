@@ -53,8 +53,9 @@ describe("LAYOUTS", () => {
 
 describe("frame lama", () => {
   it("frame tanpa motif, bentuk, dan garis tepi tetap valid dengan nilai default", () => {
-    const { pattern: _pattern, ...old } = base;
-    const parsed = parseTemplate({ ...old, photo: { radius: 20 } });
+    const old: Record<string, unknown> = { ...base, photo: { radius: 20 } };
+    delete old.pattern;
+    const parsed = parseTemplate(old);
     expect(parsed.pattern).toBe("none");
     expect(parsed.photo).toEqual({ radius: 20, shape: "rounded", outline: "#ffffff" });
   });
