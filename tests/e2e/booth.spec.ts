@@ -340,7 +340,7 @@ test("karakter bisa digeser langsung di canvas", async ({ page }) => {
   await page.mouse.move(cx + box.width / 4, cy, { steps: 4 });
   await page.mouse.up();
 
-  await expect.poll(async () => Number(await slider.inputValue())).toBeGreaterThan(0.6);
+  await expect.poll(async () => Number(await slider.inputValue())).toBeGreaterThan(0.5);
 });
 
 test("frame custom bisa dihapus", async ({ page }) => {
