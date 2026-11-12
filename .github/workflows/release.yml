@@ -23,6 +23,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # tanpa deploy key, checkout diam-diam pakai GITHUB_TOKEN dan push-nya ditolak ruleset main
+      - name: Check deploy key
+        env:
+          KEY: ${{ secrets.RELEASE_DEPLOY_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::Secret RELEASE_DEPLOY_KEY belum diisi. Lihat bagian Releasing di README."
+            exit 1
+          fi
       - uses: actions/checkout@v4
         with:
           ref: main
