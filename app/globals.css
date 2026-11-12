@@ -77,7 +77,16 @@ input[type="range"] { accent-color: var(--accent); }
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-inline-start: auto;
+}
+
+/* di HP langkahnya satu baris penuh di bawah judul, di layar lebar nempel di kanan */
+@media (max-width: 639px) {
+  .steps { order: 3; width: 100%; }
+  .steps li { flex: 1; justify-content: center; padding-inline: 0.3rem 0.5rem; font-size: 0.8rem; }
+}
+
+@media (min-width: 640px) {
+  .steps { margin-inline-start: auto; }
 }
 
 .steps li {
@@ -144,8 +153,40 @@ input[type="range"] { accent-color: var(--accent); }
   transition: transform 150ms ease;
 }
 
-.btn:not(:disabled):hover, .pop:hover { transform: translateY(-2px) rotate(-1deg) scale(1.03); }
+/* efek hover cuma buat mouse: di layar sentuh efeknya nyangkut setelah diketuk */
+@media (hover: hover) {
+  .btn:not(:disabled):hover, .pop:hover { transform: translateY(-2px) rotate(-1deg) scale(1.03); }
+}
 .btn:not(:disabled):active, .pop:active { transform: translateY(2px) scale(0.97); }
+
+/* ketuk dua kali nggak nge-zoom, dan nggak ada jeda ketuk di HP */
+.btn, .chip, .option, .frame-card, .sticker-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+/* baris tombol: di HP tombol utama selebar layar, sisanya dua kolom biar gampang diketuk jempol */
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+}
+.actions > :first-child { grid-column: 1 / -1; }
+.actions > .btn { padding-inline: 1rem; }
+
+@media (min-width: 640px) {
+  .actions { display: flex; flex-wrap: wrap; width: auto; }
+  .actions > .btn { padding-inline: 1.6rem; }
+  .actions-center { justify-content: center; }
+}
+
+.safe-area {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@media (min-width: 640px) {
+  .safe-area { padding-left: 2rem; padding-right: 2rem; padding-bottom: 2rem; }
+}
 .btn:disabled { cursor: not-allowed; opacity: 0.5; }
 .pop { cursor: pointer; transition: transform 150ms ease; }
 

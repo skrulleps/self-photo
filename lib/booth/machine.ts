@@ -4,7 +4,7 @@ export interface BoothState { phase: Phase; shot: number; total: number; count: 
 
 export type BoothEvent =
   | { type: "START"; total: number }
-  | { type: "SHOOT" }
+  | { type: "SHOOT"; seconds?: number }
   | { type: "TICK" }
   | { type: "CAPTURED" }
   | { type: "PICKED" }
@@ -12,6 +12,16 @@ export type BoothEvent =
   | { type: "RETAKE" };
 
 export const initialBooth: BoothState = { phase: "idle", shot: 0, total: 0, count: 0 };
+
+export const TIMER_OPTIONS = [3, 5, 10] as const;
+export const DEFAULT_TIMER = 3;
+const TIMER_MAX = 10;
+
+// angka timer dari luar dibulatkan dan dijaga 1..10, nilai rusak balik ke bawaan
+export function clampTimer(seconds: number | undefined): number {
+  if (seconds === undefined || !Number.isFinite(seconds)) return DEFAULT_TIMER;
+  return Math.min(TIMER_MAX, Math.max(1, Math.round(seconds)));
+}
 
 // slot keisi: lanjut nunggu slot berikutnya, atau selesai kalau udah penuh
 function advance(s: BoothState): BoothState {
@@ -24,7 +34,7 @@ export function boothReducer(s: BoothState, e: BoothEvent): BoothState {
     case "START":
       return s.phase === "idle" && e.total > 0 ? { phase: "ready", shot: 0, total: e.total, count: 0 } : s;
     case "SHOOT":
-      return s.phase === "ready" ? { ...s, phase: "countdown", count: 3 } : s;
+      return s.phase === "ready" ? { ...s, phase: "countdown", count: clampTimer(e.seconds) } : s;
     case "TICK":
       if (s.phase !== "countdown") return s;
       return s.count > 1 ? { ...s, count: s.count - 1 } : { ...s, phase: "capturing", count: 0 };

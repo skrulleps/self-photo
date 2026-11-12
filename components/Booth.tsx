@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useReducer, useState, useSyncExternalStore, type ChangeEvent } from "react";
 import Image from "next/image";
-import { boothReducer, initialBooth } from "@/lib/booth/machine";
+import { boothReducer, DEFAULT_TIMER, initialBooth, TIMER_OPTIONS } from "@/lib/booth/machine";
 import { useCamera } from "@/lib/camera/useCamera";
 import { captureFrame } from "@/lib/camera/capture";
 import { loadPhotos } from "@/lib/camera/upload";
 import { useCustomTemplates, writeCustomTemplates } from "@/lib/export/customTemplates";
-import { emailPrint, savePrint, sharePrint } from "@/lib/export/savePrint";
+import { emailPrint, IMAGE_FORMATS, renderPrintFile, savePrint, sharePrint, type ImageFormat, type SaveResult } from "@/lib/export/savePrint";
 import { countdownNotes, RESULT_NOTES, SHUTTER_NOTES } from "@/lib/sound/notes";
 import { playSound, toggleMuted, unlockSound, useMuted } from "@/lib/sound/player";
 import { newTemplate, PRESETS } from "@/lib/template/presets";
@@ -52,6 +52,9 @@ export default function Booth() {
   const [subtitle, setSubtitle] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState(0);
+  const [timer, setTimer] = useState<number>(DEFAULT_TIMER);
+  const [format, setFormat] = useState<ImageFormat>("png");
+  const [ready, setReady] = useState<{ file: File; url: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const { videoRef, start, stop, error } = useCamera();
   const custom = useCustomTemplates();
@@ -104,6 +107,24 @@ export default function Booth() {
     playSound(RESULT_NOTES);
   }, [reviewing]);
 
+  // file hasil disiapkan duluan, biar klik simpan/bagikan langsung jalan (lihat renderPrintFile)
+  useEffect(() => {
+    if (!reviewing) return;
+    let alive = true, url = "";
+    renderPrintFile({ template, photos, text: { title, subtitle: subtitle ?? today } }, format)
+      .then((file) => {
+        if (!alive) return;
+        url = URL.createObjectURL(file);
+        setReady({ file, url });
+      })
+      .catch(() => { if (alive) setNotice("Fotonya gagal diproses. Klik Ulangi lalu coba lagi."); });
+    return () => {
+      alive = false;
+      if (url) URL.revokeObjectURL(url);
+      setReady(null);
+    };
+  }, [reviewing, template, photos, title, subtitle, today, format]);
+
   // kamera gagal tetap masuk sesi: slotnya masih bisa diisi dari device
   async function begin() {
     unlockSound();
@@ -131,11 +152,12 @@ export default function Booth() {
     setBusy(false);
   }
 
-  async function deliver(action: typeof savePrint, downloaded = "Fotonya udah disimpan.") {
+  async function deliver(action: (file: File) => Promise<SaveResult>, downloaded = "Fotonya udah disimpan.") {
+    if (!ready) return;
     setBusy(true);
     setNotice(null);
     try {
-      const result = await action({ template, photos, text });
+      const result = await action(ready.file);
       if (result === "shared") setNotice("Fotonya udah dibagikan.");
       if (result === "downloaded") setNotice(downloaded);
       if (result === "emailed") setNotice("Fotonya udah diunduh. Lampirkan file-nya ke email yang kebuka. Kalau email nggak kebuka, kirim file-nya lewat aplikasi email kamu.");
@@ -163,12 +185,12 @@ export default function Booth() {
   }
 
   return (
-    <main className="mx-auto grid w-full max-w-5xl gap-6 p-4 sm:p-8">
+    <main className="safe-area mx-auto grid w-full max-w-5xl gap-5 p-4 sm:gap-6 sm:p-8">
       <header className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <Image src="/characters/cat.svg" alt="" width={84} height={84} unoptimized loading="eager" className="wiggle" />
-        <div className="grid gap-1">
+        <Image src="/characters/cat.svg" alt="" width={84} height={84} unoptimized loading="eager" className="wiggle size-14 sm:size-21" />
+        <div className="grid min-w-0 flex-1 gap-1">
           <h1 className="brand">Studio Jepret</h1>
-          <p className="font-medium text-muted">{editing ? "Atur frame kamu sendiri, lalu simpan." : HINT[state.phase]}</p>
+          <p className="text-sm font-medium text-muted sm:text-base">{editing ? "Atur frame kamu sendiri, lalu simpan." : HINT[state.phase]}</p>
         </div>
         {!editing && (
           <ol className="steps" aria-label="Langkah">
@@ -235,11 +257,33 @@ export default function Booth() {
               </div>
             </div>
 
-            <div className={`flex flex-wrap gap-3 ${reviewing ? "justify-center" : ""}`}>
+            {(state.phase === "idle" || state.phase === "ready") && (
+              <div role="group" aria-label="Timer" className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium">Timer</span>
+                {TIMER_OPTIONS.map((s) => (
+                  <button key={s} className="chip" aria-pressed={timer === s} onClick={() => setTimer(s)} disabled={busy}>
+                    {s} detik
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {reviewing && (
+              <div role="group" aria-label="Format file" className="flex flex-wrap items-center justify-center gap-2">
+                <span className="text-sm font-medium">Format</span>
+                {IMAGE_FORMATS.map((f) => (
+                  <button key={f} className="chip" aria-pressed={format === f} onClick={() => setFormat(f)} disabled={busy}>
+                    {f.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className={`actions ${reviewing ? "actions-center" : ""}`}>
               {state.phase === "idle" && <button className="btn btn-primary" onClick={begin} disabled={busy}>Mulai jepret</button>}
               {inSession && (
                 <>
-                  <button className="btn btn-primary" onClick={() => { unlockSound(); dispatch({ type: "SHOOT" }); }} disabled={state.phase !== "ready" || !!error || busy}>
+                  <button className="btn btn-primary" onClick={() => { unlockSound(); dispatch({ type: "SHOOT", seconds: timer }); }} disabled={state.phase !== "ready" || !!error || busy}>
                     {state.phase !== "ready" ? "Siap-siap..." : state.shot === 0 ? "Jepret" : "Jepret berikutnya"}
                   </button>
                   {state.phase === "ready" && (
@@ -253,14 +297,19 @@ export default function Booth() {
               )}
               {state.phase === "review" && (
                 <>
-                  <button className="btn btn-primary" onClick={() => deliver(savePrint)} disabled={busy}>Simpan</button>
-                  <button className="btn btn-secondary" onClick={() => deliver(sharePrint, "Browser ini belum bisa berbagi langsung, jadi fotonya diunduh. Kirim file-nya lewat aplikasi favoritmu.")} disabled={busy}>Bagikan</button>
-                  <button className="btn btn-secondary" onClick={() => deliver(emailPrint)} disabled={busy}>Kirim email</button>
+                  <button className="btn btn-primary" onClick={() => deliver(savePrint)} disabled={busy || !ready}>{ready ? "Simpan" : "Menyiapkan..."}</button>
+                  <button className="btn btn-secondary" onClick={() => deliver(sharePrint, "Browser ini belum bisa berbagi langsung, jadi fotonya diunduh. Kirim file-nya lewat aplikasi favoritmu.")} disabled={busy || !ready}>Bagikan</button>
+                  <button className="btn btn-secondary" onClick={() => deliver(emailPrint)} disabled={busy || !ready}>Kirim email</button>
                   <button className="btn btn-secondary" onClick={() => reset("RETAKE")} disabled={busy}>Ulangi</button>
                 </>
               )}
             </div>
             {notice && <p role="status" className="note">{notice}</p>}
+            {reviewing && (
+              <p className="hidden text-center text-sm font-medium text-muted pointer-coarse:block">
+                Fotonya belum masuk galeri? Tekan lama gambarnya, lalu pilih Simpan gambar.
+              </p>
+            )}
           </div>
 
           <div className={reviewing ? "spotlight order-first" : "justify-self-center lg:sticky lg:top-4"}>
@@ -273,14 +322,19 @@ export default function Booth() {
               </>
             )}
             <div className={`mat ${reviewing ? "mat-hero" : "mat-tilt"}`}>
-              <PrintPreview
-                template={template}
-                photos={photos}
-                title={text.title}
-                subtitle={text.subtitle}
-                label={reviewing ? "Hasil print" : inSession ? "Frame" : "Preview print"}
-                style={{ maxHeight: reviewing ? "64vh" : "60vh", borderRadius: 10 }}
-              />
+              <div className="relative">
+                <PrintPreview
+                  template={template}
+                  photos={photos}
+                  title={text.title}
+                  subtitle={text.subtitle}
+                  label={reviewing ? "Hasil print" : inSession ? "Frame" : "Preview print"}
+                  style={{ display: "block", maxHeight: reviewing ? "64svh" : "60svh", borderRadius: 10 }}
+                />
+                {/* gambar asli di atas canvas: di HP bisa ditekan lama lalu disimpan, juga di browser dalam aplikasi yang memblokir unduhan */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- blob URL lokal, bukan aset yang bisa dioptimasi */}
+                {reviewing && ready && <img src={ready.url} alt="" aria-hidden="true" className="absolute inset-0 size-full rounded-[10px]" />}
+              </div>
               <p className="mat-caption">{template.name}</p>
             </div>
           </div>
