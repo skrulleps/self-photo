@@ -154,8 +154,13 @@ test.describe("di HP Android", () => {
     await shootAll(page, 3);
     const img = page.locator(".mat img");
     await expect(img).toHaveAttribute("src", /^blob:/);
-    const [a, b] = [await img.boundingBox(), await result(page).boundingBox()];
-    expect(a).toEqual(b);
+    // diukur di satu frame yang sama, dan ditunggu sampai animasi masuk selesai
+    const gap = () => page.evaluate(() => {
+      const a = document.querySelector(".mat img")!.getBoundingClientRect();
+      const b = document.querySelector(".mat canvas")!.getBoundingClientRect();
+      return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y), Math.abs(a.width - b.width), Math.abs(a.height - b.height));
+    });
+    await expect.poll(gap).toBeLessThan(0.5);
   });
 });
 
