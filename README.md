@@ -95,6 +95,9 @@ The app is a static site hosted on Cloudflare Pages:
 | Build command | `npx next build` |
 | Build output directory | `out` |
 | Production branch | `main` |
+| Environment variable | `SITE_URL` = your production URL, for example `https://self-photo.pages.dev` |
+
+`SITE_URL` makes link previews (WhatsApp, social media) use the right image URL. Preview builds use Cloudflare's `CF_PAGES_URL` automatically.
 
 To preview a build locally, run `npm run build`, then `npx serve@latest out`.
 

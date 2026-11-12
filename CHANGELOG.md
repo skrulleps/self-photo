@@ -4,6 +4,10 @@ All notable changes to Studio Jepret are listed here. The format follows [Keep a
 
 ## [Unreleased]
 
+### Added
+
+- App icon, and a link preview image for WhatsApp and social media.
+
 ## [0.2.0] - 2026-11-03
 
 The full visitor flow, a frame editor, themed frames, and a new look.
