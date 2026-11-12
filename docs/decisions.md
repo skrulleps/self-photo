@@ -96,3 +96,9 @@ Format: tanggal · keputusan · alasan · alternatif yang ditolak. Terbaru di at
 - **Keputusan:** Next.js + TypeScript strict, Vitest, Playwright.
 - **Alasan:** ekosistem React (react-konva, contoh MediaPipe), API route untuk upload/QR/webhook nanti.
 - **Ditolak:** Nuxt (setara, tapi ekosistem editor canvas lebih kecil).
+
+## 2026-11-12 · File hasil disiapkan sebelum tombol simpan diklik
+
+- **Keputusan:** begitu hasil jadi (dan tiap ganti format PNG/JPG), file dirender duluan. Tombol Simpan/Bagikan/Kirim email cuma memakai file yang sudah ada. Di iPhone, Simpan lewat share sheet; di Android dan desktop, unduh langsung. Gambar asli ditaruh di atas canvas hasil supaya bisa ditekan lama lalu disimpan.
+- **Alasan:** Safari dan Chrome HP cuma mengizinkan `navigator.share` dan unduhan selama masih di dalam klik. Render + `toBlob` setelah klik bikin izinnya habis, jadi di HP nggak terjadi apa-apa. Browser dalam aplikasi (WhatsApp, Instagram) sering memblokir unduhan sama sekali, jadi tekan lama jadi jalan cadangan.
+- **Ditolak:** buka gambar di tab baru (diblokir sebagai popup di banyak browser HP), data URL di link unduh (berat untuk print besar, tetap diblokir di browser dalam aplikasi).

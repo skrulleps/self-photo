@@ -98,6 +98,91 @@ test("jepret 3 foto lalu simpan PNG 600x1800", async ({ page }) => {
   expect(pngSize(await file.path())).toEqual({ width: 600, height: 1800 });
 });
 
+test("bisa simpan sebagai JPG", async ({ page }) => {
+  await page.goto("/?fast=1");
+  await shootAll(page, 3);
+  const format = page.getByRole("group", { name: "Format file" });
+  await expect(format.getByRole("button", { name: "PNG" })).toHaveAttribute("aria-pressed", "true");
+  await format.getByRole("button", { name: "JPG" }).click();
+
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Simpan" }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe("studio-jepret-blush.jpg");
+  // tanda awal file JPEG
+  expect([...readFileSync(await file.path()).subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
+});
+
+test.describe("di HP Android", () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+    userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36",
+  });
+
+  test("simpan langsung mengunduh, nggak membuka share sheet", async ({ page }) => {
+    await page.addInitScript(() => {
+      navigator.canShare = () => true;
+      navigator.share = async () => { document.title = "shared"; };
+    });
+    await page.goto("/?fast=1");
+    await shootAll(page, 3);
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Simpan" }).tap();
+    expect((await download).suggestedFilename()).toBe("studio-jepret-blush.png");
+    await expect(page).not.toHaveTitle("shared");
+  });
+
+  test("halaman muat di layar HP tanpa geser ke samping", async ({ page }) => {
+    const noSideScroll = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+    await page.goto("/?fast=1");
+    expect(await noSideScroll()).toBe(true);
+    await page.getByRole("button", { name: "Mulai jepret" }).tap();
+    await expect(shoot(page)).toBeEnabled();
+    expect(await noSideScroll()).toBe(true);
+    for (let i = 0; i < 3; i++) {
+      await shoot(page).tap();
+      if (i < 2) await expect(page.getByText(`Pose ${i + 2} dari 3`)).toBeVisible();
+    }
+    await expect(result(page)).toBeVisible();
+    expect(await noSideScroll()).toBe(true);
+  });
+
+  test("gambar hasil bisa ditekan lama buat disimpan", async ({ page }) => {
+    await page.goto("/?fast=1");
+    await shootAll(page, 3);
+    const img = page.locator(".mat img");
+    await expect(img).toHaveAttribute("src", /^blob:/);
+    const [a, b] = [await img.boundingBox(), await result(page).boundingBox()];
+    expect(a).toEqual(b);
+  });
+});
+
+test.describe("di iPhone", () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+  });
+
+  test("simpan lewat share sheet biar bisa masuk ke Foto", async ({ page }) => {
+    await page.addInitScript(() => {
+      navigator.canShare = () => true;
+      // Safari menolak share kalau udah lewat dari klik, test ini memastikan share dipanggil saat itu juga
+      navigator.share = async (data) => {
+        if (!navigator.userActivation.isActive) throw new DOMException("telat", "NotAllowedError");
+        document.title = `shared:${data?.files?.[0]?.name}`;
+      };
+    });
+    await page.goto("/?fast=1");
+    await shootAll(page, 3);
+    await page.getByRole("button", { name: "Simpan" }).tap();
+    await expect(page).toHaveTitle("shared:studio-jepret-blush.png");
+  });
+});
+
 test("hasil print tampil di tengah layar, dengan tombol simpan di bawahnya", async ({ page }) => {
   await page.goto("/?fast=1");
   await shootAll(page, 3);
@@ -192,6 +277,24 @@ test("countdown, jepret, dan hasil berbunyi", async ({ page }) => {
   await expect(result(page)).toBeVisible();
   // 3 sesi x 5 nada + 5 nada hasil
   await expect.poll(() => notesPlayed(page)).toBe(20);
+});
+
+test("timer bisa diganti, dan countdown-nya ikut panjang", async ({ page }) => {
+  await countNotes(page);
+  await page.goto("/?fast=1");
+  const timer = page.getByRole("group", { name: "Timer" });
+  await expect(timer.getByRole("button", { name: "3 detik" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Mulai jepret" }).click();
+
+  await timer.getByRole("button", { name: "5 detik" }).click();
+  await expect(timer.getByRole("button", { name: "5 detik" })).toHaveAttribute("aria-pressed", "true");
+  await expect(timer.getByRole("button", { name: "3 detik" })).toHaveAttribute("aria-pressed", "false");
+  await shoot(page).click();
+  await expect(page.getByText("Pose 2 dari 3")).toBeVisible();
+  // 5 bunyi countdown + 2 nada jepret
+  await expect.poll(() => notesPlayed(page)).toBe(7);
+  // pilihan timer tetap dipakai buat jepretan berikutnya
+  await expect(timer.getByRole("button", { name: "5 detik" })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("suara bisa dimatikan dan pilihannya diingat setelah reload", async ({ page }) => {

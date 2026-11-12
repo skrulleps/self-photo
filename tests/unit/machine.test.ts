@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boothReducer, initialBooth, type BoothEvent } from "@/lib/booth/machine";
+import { boothReducer, clampTimer, DEFAULT_TIMER, initialBooth, type BoothEvent } from "@/lib/booth/machine";
 
 const run = (evs: BoothEvent[]) => evs.reduce(boothReducer, initialBooth);
 const start3: BoothEvent = { type: "START", total: 3 };
@@ -50,7 +50,30 @@ describe("boothReducer", () => {
   it("ulangi di tengah countdown diabaikan", () => {
     expect(run([start3, { type: "SHOOT" }, { type: "RETAKE" }]).phase).toBe("countdown");
   });
+  it("timer bisa diatur per jepretan", () => {
+    expect(run([start3, { type: "SHOOT", seconds: 10 }])).toMatchObject({ phase: "countdown", count: 10 });
+  });
+  it("timer 5 detik butuh 5 tick sebelum capturing", () => {
+    const four: BoothEvent[] = [...tick3, { type: "TICK" }];
+    const s = run([start3, { type: "SHOOT", seconds: 5 }, ...four]);
+    expect(s).toMatchObject({ phase: "countdown", count: 1 });
+    expect(boothReducer(s, { type: "TICK" }).phase).toBe("capturing");
+  });
   it("start tanpa slot diabaikan", () => {
     expect(run([{ type: "START", total: 0 }])).toEqual(initialBooth);
+  });
+});
+
+describe("clampTimer", () => {
+  it("tanpa nilai atau nilai rusak pakai bawaan", () => {
+    expect(clampTimer(undefined)).toBe(DEFAULT_TIMER);
+    expect(clampTimer(Number.NaN)).toBe(DEFAULT_TIMER);
+    expect(clampTimer(Infinity)).toBe(DEFAULT_TIMER);
+  });
+  it("dijaga 1 sampai 10 detik dan dibulatkan", () => {
+    expect(clampTimer(0)).toBe(1);
+    expect(clampTimer(-5)).toBe(1);
+    expect(clampTimer(60)).toBe(10);
+    expect(clampTimer(4.6)).toBe(5);
   });
 });

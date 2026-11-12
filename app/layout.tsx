@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Fredoka } from "next/font/google";
 import "./globals.css";
@@ -26,6 +26,17 @@ export const metadata: Metadata = {
     description,
   },
   twitter: { card: "summary_large_image" },
+};
+
+// viewportFit cover: konten boleh sampai ke tepi layar berponi, jaraknya diatur .safe-area
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fff3f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#2a1f33" },
+  ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

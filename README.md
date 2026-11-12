@@ -8,11 +8,11 @@ Photos are processed on the device. Nothing is uploaded to a server.
 
 - **Ready-made frames:** 12 presets across three categories, including Halloween, Graduation Day, Valentine, and Happy New Year.
 - **Photo per slot:** fill each slot from the camera or from a file on the device, and mix both in one print. If camera access is denied, device files still work.
-- **Guided capture:** live camera preview, a 3-second countdown after each click, and a photo that lands in its slot right away.
+- **Guided capture:** live camera preview, a countdown after each click (3, 5, or 10 seconds, switchable between shots), and a photo that lands in its slot right away.
 - **Sound effects:** countdown beeps, a shutter click, and a short jingle when the print is ready, with a button to mute them.
 - **Frame editor:** choose from 7 layouts, 7 photo shapes, and 5 background patterns, then set colors and text.
 - **Characters:** add built-in characters or import your own images, then move, resize, rotate, flip, and reorder them, up to 12 per frame.
-- **Save and share:** download a PNG, use the device share sheet, or send by email.
+- **Save and share:** download as PNG or JPG, use the device share sheet, or send by email. On phones the result can also be long-pressed to save it.
 
 Custom frames are stored in the browser's `localStorage`, so they stay on that browser and device.
 
@@ -112,7 +112,7 @@ lib/template/        Template types, schema, presets, layers, storage
 lib/render/          renderPrint, shapes, geometry
 lib/booth/           Booth state machine (reducer)
 lib/camera/          Camera hook, frame capture, file loading
-lib/export/          PNG export, sharing, fonts, image cache
+lib/export/          PNG/JPG export, sharing, fonts, image cache
 lib/sound/           Sound effect notes and Web Audio player
 public/characters/   Built-in character art
 public/samples/      Sample photos for frame thumbnails
