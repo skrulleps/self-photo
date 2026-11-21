@@ -9,12 +9,17 @@ import { useCustomTemplates, writeCustomTemplates } from "@/lib/export/customTem
 import { emailPrint, IMAGE_FORMATS, renderPrintFile, savePrint, sharePrint, type ImageFormat, type SaveResult } from "@/lib/export/savePrint";
 import { countdownNotes, RESULT_NOTES, SHUTTER_NOTES } from "@/lib/sound/notes";
 import { playSound, toggleMuted, unlockSound, useMuted } from "@/lib/sound/player";
+import { FILTER_IDS, FILTER_LABELS, FILTERS, type FilterId } from "@/lib/render/filters";
+import { photoArea } from "@/lib/render/crop";
 import { newTemplate, PRESETS } from "@/lib/template/presets";
 import { TITLE_MAX } from "@/lib/template/schema";
 import { upsertTemplate } from "@/lib/template/store";
 import type { Template } from "@/lib/template/types";
+import FilterDefs, { filterCss } from "./FilterDefs";
 import FrameEditor from "./FrameEditor";
+import PhotoAdjuster from "./PhotoAdjuster";
 import PrintPreview from "./PrintPreview";
+import ShapeGuide from "./ShapeGuide";
 import TemplatePicker from "./TemplatePicker";
 
 const LABEL = "grid gap-1 text-sm font-medium";
@@ -37,6 +42,7 @@ const HINT = {
   ready: "Tiap slot bisa pakai kamera atau gambar dari device.",
   countdown: "Siap-siap, jangan gerak!",
   capturing: "Siap-siap, jangan gerak!",
+  adjusting: "Geser dan zoom gambarnya biar pas di frame.",
   review: "Hasilnya udah jadi. Simpan atau ulangi dari awal.",
 };
 
@@ -56,6 +62,9 @@ export default function Booth() {
   const [format, setFormat] = useState<ImageFormat>("png");
   const [ready, setReady] = useState<{ file: File; url: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterId>("normal");
+  // gambar dari device yang lagi diatur posisinya, belum masuk slot
+  const [adjust, setAdjust] = useState<HTMLCanvasElement | null>(null);
   const { videoRef, start, stop, error } = useCamera();
   const custom = useCustomTemplates();
   const muted = useMuted();
@@ -65,9 +74,12 @@ export default function Booth() {
   const templates = [...PRESETS, ...custom];
   const template = templates.find((t) => t.id === templateId) ?? PRESETS[0];
   const text = { title, subtitle: subtitle ?? today };
-  const inSession = state.phase === "ready" || state.phase === "countdown" || state.phase === "capturing";
+  const adjusting = state.phase === "adjusting" && !!adjust;
+  const inSession = state.phase === "ready" || state.phase === "countdown" || state.phase === "capturing" || state.phase === "adjusting";
   const reviewing = state.phase === "review";
   const step = state.phase === "idle" ? 0 : inSession ? 1 : 2;
+  // slot yang lagi diisi: preview kamera dan pengatur gambar ikut bentuk dan perbandingannya
+  const { aspect: slotAspect, radiusRatio } = photoArea(template, state.shot);
 
   // countdown, capture frame on the last tick
   useEffect(() => {
@@ -76,14 +88,14 @@ export default function Booth() {
     const id = setTimeout(() => {
       dispatch({ type: "TICK" });
       if (state.count > 1 || !videoRef.current) return;
-      const frame = captureFrame(videoRef.current);
+      const frame = captureFrame(videoRef.current, FILTERS[filter]);
       setPhotos((p) => [...p, frame]);
       setFlash((n) => n + 1);
       playSound(SHUTTER_NOTES);
       dispatch({ type: "CAPTURED" });
     }, fast ? 100 : 1000);
     return () => clearTimeout(id);
-  }, [state.phase, state.count, state.shot, videoRef]);
+  }, [state.phase, state.count, state.shot, videoRef, filter]);
 
   // bunyi tiap angka countdown
   useEffect(() => {
@@ -92,8 +104,8 @@ export default function Booth() {
 
   // video baru kelihatan pas sesi mulai, sebagian browser perlu di-play ulang setelah elemennya tampil
   useEffect(() => {
-    if (inSession && !error) videoRef.current?.play().catch(() => {});
-  }, [inSession, error, videoRef]);
+    if (state.phase === "ready" && !error) videoRef.current?.play().catch(() => {});
+  }, [state.phase, error, videoRef]);
 
   // selesai atau batal: off camera
   useEffect(() => {
@@ -144,8 +156,8 @@ export default function Booth() {
     setNotice(null);
     try {
       const [photo] = await loadPhotos([file], 1);
-      setPhotos((p) => [...p, photo]);
-      dispatch({ type: "PICKED" });
+      setAdjust(photo);
+      dispatch({ type: "LOADED" });
     } catch {
       setNotice("Gambarnya nggak bisa dibuka. Pilih file JPG atau PNG lain.");
     }
@@ -165,6 +177,17 @@ export default function Booth() {
       setNotice("Fotonya gagal diproses. Coba klik tombolnya lagi.");
     }
     setBusy(false);
+  }
+
+  function applyAdjusted(photo: HTMLCanvasElement) {
+    setPhotos((p) => [...p, photo]);
+    setAdjust(null);
+    dispatch({ type: "PICKED" });
+  }
+
+  function cancelAdjust() {
+    setAdjust(null);
+    dispatch({ type: "CANCEL" });
   }
 
   function reset(type: "RETAKE" | "CANCEL") {
@@ -250,12 +273,34 @@ export default function Booth() {
             )}
             {inSession && error && <p role="alert" className="note">{error} Kamu tetap bisa pakai gambar dari device.</p>}
 
-            <div className="booth-window relative aspect-4/3 w-full overflow-hidden" hidden={!inSession || !!error}>
-              <video ref={videoRef} playsInline muted className="h-full w-full object-cover" style={{ transform: "scaleX(-1)" }} />
+            {adjusting && adjust && (
+              <PhotoAdjuster source={adjust} aspect={slotAspect} shape={template.photo.shape} radiusRatio={radiusRatio} onUse={applyAdjusted} onCancel={cancelAdjust} />
+            )}
+
+            {/* kotak kamera seukuran slot yang lagi diisi: object-cover memotong dari tengah, sama dengan crop saat render */}
+            <div
+              className="booth-window relative mx-auto overflow-hidden"
+              hidden={!inSession || !!error || state.phase === "adjusting"}
+              style={{ aspectRatio: slotAspect, width: `min(100%, calc(60svh * ${slotAspect}))` }}
+            >
+              <video ref={videoRef} playsInline muted className="h-full w-full object-cover" style={{ transform: "scaleX(-1)", filter: filterCss(filter) }} />
+              <ShapeGuide shape={template.photo.shape} aspect={slotAspect} radiusRatio={radiusRatio} />
               <div aria-live="polite" className="absolute inset-0 grid place-items-center">
                 {state.phase === "countdown" && <span key={state.count} className="count-bubble">{state.count}</span>}
               </div>
             </div>
+
+            {(state.phase === "idle" || state.phase === "ready") && (
+              <div role="group" aria-label="Filter kamera" className="filter-row">
+                <span className="text-sm font-medium">Filter</span>
+                {FILTER_IDS.map((f) => (
+                  <button key={f} className="chip filter-chip" aria-pressed={filter === f} onClick={() => setFilter(f)} disabled={busy}>
+                    <span className="filter-swatch" style={{ filter: filterCss(f) }} aria-hidden="true" />
+                    {FILTER_LABELS[f]}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {(state.phase === "idle" || state.phase === "ready") && (
               <div role="group" aria-label="Timer" className="flex flex-wrap items-center gap-2">
@@ -281,7 +326,7 @@ export default function Booth() {
 
             <div className={`actions ${reviewing ? "actions-center" : ""}`}>
               {state.phase === "idle" && <button className="btn btn-primary" onClick={begin} disabled={busy}>Mulai jepret</button>}
-              {inSession && (
+              {inSession && !adjusting && (
                 <>
                   <button className="btn btn-primary" onClick={() => { unlockSound(); dispatch({ type: "SHOOT", seconds: timer }); }} disabled={state.phase !== "ready" || !!error || busy}>
                     {state.phase !== "ready" ? "Siap-siap..." : state.shot === 0 ? "Jepret" : "Jepret berikutnya"}
@@ -341,6 +386,7 @@ export default function Booth() {
         </div>
       )}
 
+      <FilterDefs />
       {flash > 0 && <div key={flash} className="booth-flash" aria-hidden="true" />}
     </main>
   );

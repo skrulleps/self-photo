@@ -7,12 +7,13 @@ Photos are processed on the device. Nothing is uploaded to a server.
 ## Features
 
 - **Ready-made frames:** 12 presets across three categories, including Halloween, Graduation Day, Valentine, and Happy New Year.
-- **Photo per slot:** fill each slot from the camera or from a file on the device, and mix both in one print. If camera access is denied, device files still work.
-- **Guided capture:** live camera preview, a countdown after each click (3, 5, or 10 seconds, switchable between shots), and a photo that lands in its slot right away.
+- **Photo per slot:** fill each slot from the camera or from a file on the device, and mix both in one print. Device images can be dragged and zoomed (pinch or slider) to fit the slot. If camera access is denied, device files still work.
+- **Guided capture:** a live camera preview shaped like the slot being filled, so what you see is what lands in the frame. A countdown after each click (3, 5, or 10 seconds, switchable between shots).
+- **Camera filters:** Normal, black and white, sepia, warm, cool, vivid, faded, and pink. The preview and the saved photo use the same color matrix, so they match.
 - **Sound effects:** countdown beeps, a shutter click, and a short jingle when the print is ready, with a button to mute them.
 - **Frame editor:** choose from 7 layouts, 7 photo shapes, and 5 background patterns, then set colors and text.
 - **Characters:** add built-in characters or import your own images, then move, resize, rotate, flip, and reorder them, up to 12 per frame.
-- **Save and share:** download as PNG or JPG, use the device share sheet, or send by email. On phones the result can also be long-pressed to save it.
+- **Save and share:** download as PNG or JPG at 2x the template size, use the device share sheet, or send by email. On phones the result can also be long-pressed to save it.
 
 Custom frames are stored in the browser's `localStorage`, so they stay on that browser and device.
 

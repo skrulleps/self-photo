@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderPrint, resolveText, type Ctx2D, type Photo } from "@/lib/render/render";
 import { coverCrop, toPx } from "@/lib/render/geometry";
+import { shapeBounds } from "@/lib/render/shapes";
 import { PRESETS } from "@/lib/template/presets";
 
 const template = PRESETS[0];
@@ -74,9 +75,21 @@ describe("renderPrint", () => {
     renderPrint(ctx, { template, photos: [photo(), photo(), photo()] });
     const draws = named("drawImage");
     expect(draws).toHaveLength(3);
-    const r = toPx(template.slots[1], template.size);
+    const r = shapeBounds(template.photo.shape, toPx(template.slots[1], template.size));
     const c = coverCrop(1280, 960, r.width, r.height);
     expect(draws[1].args.slice(1)).toEqual([c.sx, c.sy, c.sw, c.sh, r.x, r.y, r.width, r.height]);
+  });
+  it("bentuk hati di slot lebar: foto di-crop ke persegi bentuknya, bukan seluruh slot", () => {
+    const { ctx, named } = mockCtx();
+    const heart = { ...template, photo: { ...template.photo, shape: "heart" as const } };
+    renderPrint(ctx, { template: heart, photos: [photo()] });
+    const slot = toPx(heart.slots[0], heart.size);
+    const [, , , sw, sh, , , dw, dh] = named("drawImage")[0].args as number[];
+    expect(dw).toBeCloseTo(Math.min(slot.width, slot.height));
+    expect(dw).toBeCloseTo(dh);
+    // crop persegi dari foto 4:3 memakai seluruh tinggi foto, jadi nggak di-zoom lebih dari perlu
+    expect(sh).toBeCloseTo(960);
+    expect(sw).toBeCloseTo(960);
   });
   it("foto kurang dari slot: slot sisanya tetap placeholder", () => {
     const { ctx, named } = mockCtx();

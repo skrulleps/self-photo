@@ -1,6 +1,6 @@
 import type { Template } from "@/lib/template/types";
 import { coverCrop, fitFontSize, layerSize, toPx } from "./geometry";
-import { traceShape, type ShapeCtx } from "./shapes";
+import { shapeBounds, traceShape, type ShapeCtx } from "./shapes";
 
 export type Photo = CanvasImageSource & { width: number; height: number };
 
@@ -77,8 +77,9 @@ export function renderPrint(ctx: Ctx2D, { template: t, photos = [], text, images
     traceShape(ctx, t.photo.shape, r, t.photo.radius);
     ctx.clip();
     if (img) {
-      const c = coverCrop(img.width, img.height, r.width, r.height);
-      ctx.drawImage(img, c.sx, c.sy, c.sw, c.sh, r.x, r.y, r.width, r.height);
+      const b = shapeBounds(t.photo.shape, r);
+      const c = coverCrop(img.width, img.height, b.width, b.height);
+      ctx.drawImage(img, c.sx, c.sy, c.sw, c.sh, b.x, b.y, b.width, b.height);
     } else {
       ctx.fillStyle = "#dddddd";
       ctx.fillRect(r.x, r.y, r.width, r.height);

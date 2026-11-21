@@ -5,7 +5,7 @@ const run = (evs: BoothEvent[]) => evs.reduce(boothReducer, initialBooth);
 const start3: BoothEvent = { type: "START", total: 3 };
 const tick3: BoothEvent[] = [{ type: "TICK" }, { type: "TICK" }, { type: "TICK" }];
 const shot: BoothEvent[] = [{ type: "SHOOT" }, ...tick3, { type: "CAPTURED" }];
-const picked: BoothEvent = { type: "PICKED" };
+const picked: BoothEvent[] = [{ type: "LOADED" }, { type: "PICKED" }];
 
 describe("boothReducer", () => {
   it("mulai sesi nunggu di preview kamera, belum countdown", () => {
@@ -24,16 +24,16 @@ describe("boothReducer", () => {
     expect(run([start3, ...shot, ...shot, ...shot]).phase).toBe("review");
   });
   it("gambar dari device ngisi satu slot, lalu nunggu slot berikutnya", () => {
-    expect(run([start3, picked])).toMatchObject({ phase: "ready", shot: 1 });
+    expect(run([start3, ...picked])).toMatchObject({ phase: "ready", shot: 1 });
   });
   it("kamera dan device bisa dicampur sampai penuh", () => {
-    expect(run([start3, ...shot, picked, ...shot]).phase).toBe("review");
+    expect(run([start3, ...shot, ...picked, ...shot]).phase).toBe("review");
   });
   it("gambar dari device saat countdown diabaikan", () => {
-    expect(run([start3, { type: "SHOOT" }, picked])).toMatchObject({ phase: "countdown", shot: 0 });
+    expect(run([start3, { type: "SHOOT" }, ...picked])).toMatchObject({ phase: "countdown", shot: 0 });
   });
   it("event yang salah fase diabaikan", () => {
-    expect(run([{ type: "TICK" }, { type: "CAPTURED" }, { type: "SHOOT" }, picked])).toEqual(initialBooth);
+    expect(run([{ type: "TICK" }, { type: "CAPTURED" }, { type: "SHOOT" }, ...picked])).toEqual(initialBooth);
   });
   it("tick saat nunggu klik diabaikan", () => {
     expect(run([start3, { type: "TICK" }]).phase).toBe("ready");
@@ -58,6 +58,18 @@ describe("boothReducer", () => {
     const s = run([start3, { type: "SHOOT", seconds: 5 }, ...four]);
     expect(s).toMatchObject({ phase: "countdown", count: 1 });
     expect(boothReducer(s, { type: "TICK" }).phase).toBe("capturing");
+  });
+  it("gambar dari device diatur dulu, belum masuk slot", () => {
+    expect(run([start3, { type: "LOADED" }])).toMatchObject({ phase: "adjusting", shot: 0 });
+  });
+  it("batal saat mengatur gambar balik nunggu slot yang sama, sesinya tetap jalan", () => {
+    expect(run([start3, ...shot, { type: "LOADED" }, { type: "CANCEL" }])).toMatchObject({ phase: "ready", shot: 1, total: 3 });
+  });
+  it("jepret saat mengatur gambar diabaikan", () => {
+    expect(run([start3, { type: "LOADED" }, { type: "SHOOT" }]).phase).toBe("adjusting");
+  });
+  it("pakai gambar tanpa mengatur dulu diabaikan", () => {
+    expect(run([start3, { type: "PICKED" }])).toMatchObject({ phase: "ready", shot: 0 });
   });
   it("start tanpa slot diabaikan", () => {
     expect(run([{ type: "START", total: 0 }])).toEqual(initialBooth);

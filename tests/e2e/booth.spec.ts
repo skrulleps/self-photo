@@ -13,6 +13,28 @@ const result = (page: Page) => page.getByRole("img", { name: "Hasil print" });
 const shoot = (page: Page) => page.getByRole("button", { name: /^Jepret/ });
 const device = (page: Page) => page.getByLabel("Pilih dari device");
 
+// gambar dari device diatur dulu, baru masuk slot
+async function pickFromDevice(page: Page, file: Parameters<ReturnType<typeof device>["setInputFiles"]>[0] = PNG_FILE) {
+  await device(page).setInputFiles(file);
+  await page.getByRole("button", { name: "Pakai gambar ini" }).click();
+}
+
+// gambar 400x100: kiri merah, kanan biru. Dibuat di browser biar nggak perlu file contoh.
+async function twoColorPng(page: Page) {
+  const url = await page.evaluate(() => {
+    const c = document.createElement("canvas");
+    c.width = 400;
+    c.height = 100;
+    const x = c.getContext("2d")!;
+    x.fillStyle = "#ff0000";
+    x.fillRect(0, 0, 200, 100);
+    x.fillStyle = "#0000ff";
+    x.fillRect(200, 0, 200, 100);
+    return c.toDataURL("image/png");
+  });
+  return { name: "dua-warna.png", mimeType: "image/png", buffer: Buffer.from(url.split(",")[1], "base64") };
+}
+
 // warna pixel di koordinat print
 function pixel(page: Page, name: string, y: number) {
   return () => page.getByRole("img", { name }).evaluate(
@@ -74,7 +96,7 @@ test("slot bisa campur: kamera lalu gambar dari device", async ({ page }) => {
   await shoot(page).click();
   await expect(page.getByText("Pose 2 dari 3")).toBeVisible();
 
-  await device(page).setInputFiles(PNG_FILE);
+  await pickFromDevice(page);
   await expect(page.getByText("Pose 3 dari 3")).toBeVisible();
   await expect.poll(pixel(page, "Frame", STRIP_SLOT_CENTERS[1])).not.toEqual(GRAY);
   await expect.poll(pixel(page, "Frame", STRIP_SLOT_CENTERS[2])).toEqual(GRAY);
@@ -83,7 +105,7 @@ test("slot bisa campur: kamera lalu gambar dari device", async ({ page }) => {
   await expect(result(page)).toBeVisible();
 });
 
-test("jepret 3 foto lalu simpan PNG 600x1800", async ({ page }) => {
+test("jepret 3 foto lalu simpan PNG 2x ukuran template (1200x3600)", async ({ page }) => {
   await page.goto("/?fast=1");
   await shootAll(page, 3);
 
@@ -95,7 +117,7 @@ test("jepret 3 foto lalu simpan PNG 600x1800", async ({ page }) => {
   await page.getByRole("button", { name: "Simpan" }).click();
   const file = await download;
   expect(file.suggestedFilename()).toBe("studio-jepret-blush.png");
-  expect(pngSize(await file.path())).toEqual({ width: 600, height: 1800 });
+  expect(pngSize(await file.path())).toEqual({ width: 1200, height: 3600 });
 });
 
 test("bisa simpan sebagai JPG", async ({ page }) => {
@@ -322,7 +344,7 @@ test("template grid minta 4 pose dan hasilnya 1200x1500", async ({ page }) => {
 
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Simpan" }).click();
-  expect(pngSize(await (await download).path())).toEqual({ width: 1200, height: 1500 });
+  expect(pngSize(await (await download).path())).toEqual({ width: 2400, height: 3000 });
 });
 
 test("ulangi balik ke awal tanpa foto lama", async ({ page }) => {
@@ -356,15 +378,71 @@ test("izin kamera ditolak: ada pesan, semua slot bisa diisi dari device", async 
   await expect(shoot(page)).toBeDisabled();
 
   for (const n of [2, 3]) {
-    await device(page).setInputFiles(PNG_FILE);
+    await pickFromDevice(page);
     await expect(page.getByText(`Pose ${n} dari 3`)).toBeVisible();
   }
-  await device(page).setInputFiles(PNG_FILE);
+  await pickFromDevice(page);
   await expect(result(page)).toBeVisible();
   for (const y of STRIP_SLOT_CENTERS) {
     await expect.poll(pixel(page, "Hasil print", y)).not.toEqual(GRAY);
   }
   await expect(page.getByRole("button", { name: "Simpan" })).toBeEnabled();
+});
+
+test("gambar dari device bisa digeser sebelum masuk frame", async ({ page }) => {
+  await page.goto("/?fast=1");
+  await page.getByRole("button", { name: "Mulai jepret" }).click();
+  await expect(shoot(page)).toBeEnabled();
+  await device(page).setInputFiles(await twoColorPng(page));
+
+  const view = page.getByRole("img", { name: "Posisi gambar di slot" });
+  await expect(view).toBeVisible();
+  await expect(page.locator("video")).toBeHidden();
+  // geser gambar jauh ke kanan: bagian kiri (merah) yang masuk ke slot
+  const box = (await view.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 2, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await page.getByRole("button", { name: "Pakai gambar ini" }).click();
+
+  await expect(page.getByText("Pose 2 dari 3")).toBeVisible();
+  await expect.poll(pixel(page, "Frame", STRIP_SLOT_CENTERS[0])).toEqual([255, 0, 0]);
+});
+
+test("batal saat mengatur gambar: slotnya tetap kosong dan kamera balik", async ({ page }) => {
+  await page.goto("/?fast=1");
+  await page.getByRole("button", { name: "Mulai jepret" }).click();
+  await expect(shoot(page)).toBeEnabled();
+  await device(page).setInputFiles(PNG_FILE);
+  await page.getByRole("button", { name: "Batal" }).click();
+  await expect(page.getByText("Pose 1 dari 3")).toBeVisible();
+  await expect(page.locator("video")).toBeVisible();
+  await expect.poll(pixel(page, "Frame", STRIP_SLOT_CENTERS[0])).toEqual(GRAY);
+});
+
+test("filter hitam putih tampil di preview dan ikut masuk ke frame", async ({ page }) => {
+  await page.goto("/?fast=1");
+  await page.getByRole("button", { name: "Mulai jepret" }).click();
+  await expect(shoot(page)).toBeEnabled();
+  await page.getByRole("group", { name: "Filter kamera" }).getByRole("button", { name: "Hitam putih" }).click();
+  await expect(page.locator("video")).toHaveCSS("filter", /filter-bw/);
+
+  await shoot(page).click();
+  await expect(page.getByText("Pose 2 dari 3")).toBeVisible();
+  await expect.poll(async () => {
+    const [r, g, b] = await pixel(page, "Frame", STRIP_SLOT_CENTERS[0])();
+    return r === g && g === b && r !== GRAY[0];
+  }).toBe(true);
+});
+
+test("kotak kamera seukuran area foto di frame", async ({ page }) => {
+  await page.goto("/?fast=1");
+  await page.getByRole("button", { name: "Mulai jepret" }).click();
+  await expect(shoot(page)).toBeEnabled();
+  // frame bawaan Blush: hati di slot 520x390, jadi area fotonya persegi
+  const ratio = await page.locator(".booth-window").evaluate((el) => el.clientWidth / el.clientHeight);
+  expect(ratio).toBeCloseTo(1, 1);
 });
 
 test("file rusak dari device: ada pesan, slotnya tetap nunggu", async ({ page }) => {
@@ -406,7 +484,7 @@ test("bikin frame dengan karakter, tetap ada setelah reload, lalu dipakai jepret
 
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Simpan" }).click();
-  expect(pngSize(await (await download).path())).toEqual({ width: 1200, height: 1500 });
+  expect(pngSize(await (await download).path())).toEqual({ width: 2400, height: 3000 });
 });
 
 test("frame acara bisa difilter dan dipakai", async ({ page }) => {
