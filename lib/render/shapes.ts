@@ -62,6 +62,14 @@ function cloud(ctx: ShapeCtx, { x, y, width: w, height: h }: Rect) {
   ctx.closePath();
 }
 
+// kotak yang benar-benar ditempati bentuknya. Lingkaran, hati, bintang, dan bunga cuma mengisi persegi di tengah slot,
+// jadi foto di-crop ke persegi itu. Kalau di-crop ke seluruh slot, yang kelihatan cuma bagian tengah foto (terlalu zoom).
+export function shapeBounds(shape: PhotoShape, r: Rect): Rect {
+  if (shape === "rounded" || shape === "arch" || shape === "cloud") return r;
+  const s = Math.min(r.width, r.height);
+  return { x: r.x + (r.width - s) / 2, y: r.y + (r.height - s) / 2, width: s, height: s };
+}
+
 // cuma menelusuri path: beginPath, clip, fill, atau stroke urusan pemanggil
 export function traceShape(ctx: ShapeCtx, shape: PhotoShape, r: Rect, radius = 0) {
   const s = Math.min(r.width, r.height);
@@ -78,4 +86,16 @@ export function traceShape(ctx: ShapeCtx, shape: PhotoShape, r: Rect, radius = 0
     case "arch": return arch(ctx, r);
     case "cloud": return cloud(ctx, r);
   }
+}
+
+type MaskCtx = ShapeCtx & Pick<CanvasRenderingContext2D, "beginPath" | "fill"> & { fillStyle: CanvasRenderingContext2D["fillStyle"] };
+
+// redupkan area di luar bentuk foto, sebagai panduan saat jepret dan saat mengatur gambar.
+// radius dalam pixel kotak ini, jadi pemanggil menyesuaikan radius template dengan skala kotaknya.
+export function maskOutsideShape(ctx: MaskCtx, shape: PhotoShape, width: number, height: number, radius: number, color: string) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.rect(0, 0, width, height);
+  traceShape(ctx, shape, { x: 0, y: 0, width, height }, radius);
+  ctx.fill("evenodd");
 }

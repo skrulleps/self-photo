@@ -344,12 +344,44 @@ input[type="range"] { accent-color: var(--accent); }
   font-weight: 600;
 }
 
+/* bingkainya pakai shadow, bukan border, biar isi kotak tetap persis seukuran slot */
 .booth-window {
-  border: 8px solid var(--surface);
-  border-radius: 2rem;
+  border-radius: 1.25rem;
   background: #000;
-  box-shadow: 0 0 0 4px var(--lilac), 0 16px 34px var(--shadow);
+  box-shadow: 0 0 0 6px var(--surface), 0 0 0 10px var(--lilac), 0 16px 34px var(--shadow);
 }
+
+/* pilihan filter: di HP digeser ke samping, nggak numpuk jadi banyak baris */
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  overflow-x: auto;
+  padding-block: 0.25rem;
+  scrollbar-width: thin;
+}
+.filter-row > * { flex-shrink: 0; }
+
+.filter-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding-left: 0.3rem; }
+
+.filter-swatch {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #ff8fb1, #ffd36e 50%, #7cc8ff);
+}
+
+.adjust-view {
+  height: auto;
+  border-radius: 1rem;
+  background: #000;
+  box-shadow: 0 0 0 4px var(--lilac);
+  touch-action: none;
+  cursor: grab;
+}
+.adjust-view:active { cursor: grabbing; }
+.adjust-view:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
 
 .count-bubble {
   display: grid;

@@ -102,3 +102,15 @@ Format: tanggal · keputusan · alasan · alternatif yang ditolak. Terbaru di at
 - **Keputusan:** begitu hasil jadi (dan tiap ganti format PNG/JPG), file dirender duluan. Tombol Simpan/Bagikan/Kirim email cuma memakai file yang sudah ada. Di iPhone, Simpan lewat share sheet; di Android dan desktop, unduh langsung. Gambar asli ditaruh di atas canvas hasil supaya bisa ditekan lama lalu disimpan.
 - **Alasan:** Safari dan Chrome HP cuma mengizinkan `navigator.share` dan unduhan selama masih di dalam klik. Render + `toBlob` setelah klik bikin izinnya habis, jadi di HP nggak terjadi apa-apa. Browser dalam aplikasi (WhatsApp, Instagram) sering memblokir unduhan sama sekali, jadi tekan lama jadi jalan cadangan.
 - **Ditolak:** buka gambar di tab baru (diblokir sebagai popup di banyak browser HP), data URL di link unduh (berat untuk print besar, tetap diblokir di browser dalam aplikasi).
+
+## 2026-11-12 · Filter kamera pakai color matrix, bukan ctx.filter
+
+- **Keputusan:** tiap filter adalah matrix 4x5 di `lib/render/filters.ts`. Preview memakai SVG `feColorMatrix` di `<video>`, hasil jepretan dihitung per pixel dengan matrix yang sama.
+- **Alasan:** `ctx.filter` belum didukung Safari, jadi di iPhone filternya akan hilang dari hasil. Satu matrix untuk dua tempat menjamin preview sama dengan hasil.
+- **Ditolak:** CSS `filter: sepia()` dll. di preview plus `ctx.filter` saat jepret (beda hasil di Safari), WebGL (terlalu berat untuk kebutuhan ini).
+
+## 2026-11-12 · Foto di-crop ke area bentuknya, gambar device di-crop sebelum masuk slot
+
+- **Keputusan:** lingkaran, hati, bintang, dan bunga memakai persegi di tengah slot (`shapeBounds`) sebagai area crop. Gambar dari device diatur (geser/zoom) lalu dipotong jadi gambar baru seukuran area itu, jadi `renderPrint` dan `Template` nggak berubah. File export dirender 2x.
+- **Alasan:** crop ke seluruh slot bikin foto di dalam bentuk kecil kelihatan terlalu zoom. Memotong gambar device di awal menjaga render tetap satu jalur.
+- **Ditolak:** menyimpan posisi crop per foto di input render (render jadi punya dua jenis foto), zoom di bawah 1 (ada area kosong di slot).

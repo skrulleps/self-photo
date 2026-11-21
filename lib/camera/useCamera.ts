@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+// tanpa batasan ini browser kasih 640x480, jadi hasil crop ke slot kelihatan buram.
+// "ideal" bukan wajib: kamera yang nggak sanggup tetap jalan di resolusi terbaiknya. 4:3 biar nggak banyak terpotong.
+const CAMERA: MediaTrackConstraints = {
+  facingMode: "user",
+  width: { ideal: 1920 },
+  height: { ideal: 1440 },
+};
+
 export function useCamera() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -15,7 +23,7 @@ export function useCamera() {
     setError(null);
     stop();
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: CAMERA, audio: false });
       streamRef.current = stream;
       if (!videoRef.current) throw new Error("Elemen video belum siap");
       videoRef.current.srcObject = stream;

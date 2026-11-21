@@ -9,6 +9,9 @@ export const IMAGE_FORMATS: readonly ImageFormat[] = ["png", "jpg"];
 const MIME: Record<ImageFormat, string> = { png: "image/png", jpg: "image/jpeg" };
 const JPG_QUALITY = 0.92;
 const SHARE_TITLE = "Foto dari Studio Jepret";
+// template dirancang di 600x1800 dan 1200x1500. File-nya dibikin 2x biar tajam di layar HP dan saat dicetak.
+// 2400x3000 masih jauh di bawah batas canvas Safari (16,7 juta pixel).
+export const EXPORT_SCALE = 2;
 
 export function printFileName(templateId: string, format: ImageFormat) {
   return `studio-jepret-${templateId}.${format}`;
@@ -20,9 +23,12 @@ export async function renderPrintFile(input: RenderInput, format: ImageFormat): 
   const { template } = input;
   await Promise.all([loadImages(template.layers.map((l) => l.src)), loadFont(template.text.font)]);
   const canvas = document.createElement("canvas");
-  canvas.width = template.size.width;
-  canvas.height = template.size.height;
-  renderPrint(canvas.getContext("2d")!, { ...input, images: getImage, fonts: fontFamily });
+  canvas.width = template.size.width * EXPORT_SCALE;
+  canvas.height = template.size.height * EXPORT_SCALE;
+  const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingQuality = "high";
+  ctx.scale(EXPORT_SCALE, EXPORT_SCALE);
+  renderPrint(ctx, { ...input, images: getImage, fonts: fontFamily });
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {

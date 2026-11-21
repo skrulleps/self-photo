@@ -1,4 +1,5 @@
-export type Phase = "idle" | "ready" | "countdown" | "capturing" | "review";
+// adjusting: gambar dari device lagi diatur posisinya sebelum masuk slot
+export type Phase = "idle" | "ready" | "countdown" | "capturing" | "adjusting" | "review";
 
 export interface BoothState { phase: Phase; shot: number; total: number; count: number }
 
@@ -7,6 +8,7 @@ export type BoothEvent =
   | { type: "SHOOT"; seconds?: number }
   | { type: "TICK" }
   | { type: "CAPTURED" }
+  | { type: "LOADED" }
   | { type: "PICKED" }
   | { type: "CANCEL" }
   | { type: "RETAKE" };
@@ -40,9 +42,13 @@ export function boothReducer(s: BoothState, e: BoothEvent): BoothState {
       return s.count > 1 ? { ...s, count: s.count - 1 } : { ...s, phase: "capturing", count: 0 };
     case "CAPTURED":
       return s.phase === "capturing" ? advance(s) : s;
+    case "LOADED":
+      return s.phase === "ready" ? { ...s, phase: "adjusting" } : s;
     case "PICKED":
-      return s.phase === "ready" ? advance(s) : s;
+      return s.phase === "adjusting" ? advance(s) : s;
     case "CANCEL":
+      // batal saat mengatur gambar cuma membatalkan gambar itu, sesinya tetap jalan
+      if (s.phase === "adjusting") return { ...s, phase: "ready" };
       return s.phase === "ready" ? initialBooth : s;
     case "RETAKE":
       return s.phase === "review" ? initialBooth : s;

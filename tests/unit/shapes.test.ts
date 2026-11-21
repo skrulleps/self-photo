@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { traceShape, type ShapeCtx } from "@/lib/render/shapes";
+import { maskOutsideShape, shapeBounds, traceShape, type ShapeCtx } from "@/lib/render/shapes";
 import { PHOTO_SHAPES } from "@/lib/template/types";
 
 const BOX = { x: 100, y: 200, width: 400, height: 300 };
@@ -55,5 +55,43 @@ describe("traceShape", () => {
     traceShape(ctx, "heart", BOX);
     const xs = points.map(([x]) => x);
     expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(BOX.height);
+  });
+});
+
+describe("maskOutsideShape", () => {
+  function maskCtx() {
+    const calls: { name: string; args: unknown[] }[] = [];
+    const rec = (name: string) => (...args: unknown[]) => { calls.push({ name, args }); };
+    const ctx = {
+      fillStyle: "", beginPath: rec("beginPath"), fill: rec("fill"), rect: rec("rect"), roundRect: rec("roundRect"),
+      moveTo: rec("moveTo"), lineTo: rec("lineTo"), bezierCurveTo: rec("bezierCurveTo"), arc: rec("arc"), closePath: rec("closePath"),
+    };
+    return { ctx, calls };
+  }
+  it("kotak penuh ditambah bentuk, diisi evenodd biar bagian dalam bentuk tetap bening", () => {
+    const { ctx, calls } = maskCtx();
+    maskOutsideShape(ctx as never, "heart", 400, 300, 0, "#ffffff99");
+    expect(calls[0].name).toBe("beginPath");
+    expect(calls[1]).toEqual({ name: "rect", args: [0, 0, 400, 300] });
+    expect(calls.at(-1)).toEqual({ name: "fill", args: ["evenodd"] });
+    expect(ctx.fillStyle).toBe("#ffffff99");
+  });
+  it("sudut membulat pakai radius yang dikirim", () => {
+    const { ctx, calls } = maskCtx();
+    maskOutsideShape(ctx as never, "rounded", 400, 300, 24, "#fff");
+    expect(calls.find((c) => c.name === "roundRect")?.args).toEqual([0, 0, 400, 300, 24]);
+  });
+});
+
+describe("shapeBounds", () => {
+  const wide = { x: 40, y: 40, width: 520, height: 390 };
+  it.each(["circle", "heart", "star", "flower"] as const)("%s cuma menempati persegi di tengah slot", (shape) => {
+    expect(shapeBounds(shape, wide)).toEqual({ x: 105, y: 40, width: 390, height: 390 });
+  });
+  it.each(["rounded", "arch", "cloud"] as const)("%s memenuhi seluruh slot", (shape) => {
+    expect(shapeBounds(shape, wide)).toEqual(wide);
+  });
+  it("slot tinggi: perseginya di tengah secara vertikal", () => {
+    expect(shapeBounds("circle", { x: 0, y: 0, width: 100, height: 300 })).toEqual({ x: 0, y: 100, width: 100, height: 100 });
   });
 });
